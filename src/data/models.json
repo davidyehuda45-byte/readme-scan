@@ -1,0 +1,44 @@
+{
+  "anthropic": {
+    "defaultModel": "claude-3-5-haiku-latest",
+    "recommendedModels": ["claude-3-5-haiku-latest", "claude-3-5-sonnet-latest"],
+    "envKey": "ANTHROPIC_API_KEY",
+    "baseUrl": "https://api.anthropic.com/v1"
+  },
+  "openai": {
+    "defaultModel": "gpt-4o-mini",
+    "recommendedModels": ["gpt-4o-mini", "gpt-4o"],
+    "envKey": "OPENAI_API_KEY",
+    "baseUrl": "https://api.openai.com/v1"
+  },
+  "gemini": {
+    "defaultModel": "gemini-2.5-flash",
+    "recommendedModels": ["gemini-2.5-flash", "gemini-1.5-flash"],
+    "envKey": "GEMINI_API_KEY",
+    "baseUrl": "https://generativelanguage.googleapis.com/v1beta/openai"
+  },
+  "openrouter": {
+    "defaultModel": "google/gemini-2.5-flash",
+    "recommendedModels": ["google/gemini-2.5-flash", "meta-llama/llama-3.3-70b-instruct"],
+    "envKey": "OPENROUTER_API_KEY",
+    "baseUrl": "https://openrouter.ai/api/v1"
+  },
+  "groq": {
+    "defaultModel": "llama-3.3-70b-versatile",
+    "recommendedModels": ["llama-3.3-70b-versatile", "mixtral-8x7b-32768"],
+    "envKey": "GROQ_API_KEY",
+    "baseUrl": "https://api.groq.com/openai/v1"
+  },
+  "ollama": {
+    "defaultModel": "llama3.2",
+    "recommendedModels": ["llama3.2", "qwen2.5-coder", "mistral"],
+    "envKey": null,
+    "baseUrl": "http://localhost:11434"
+  },
+  "custom": {
+    "defaultModel": "default",
+    "recommendedModels": ["default"],
+    "envKey": "AUTO_README_API_KEY",
+    "baseUrl": "http://localhost:1234/v1"
+  }
+}

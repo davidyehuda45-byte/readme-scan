@@ -2,6 +2,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import { mergeReadme, wrapWithMarkers } from './merge.js';
+import { getPreset } from '../style/presets.js';
+import { lintMarkdown } from '../style/lint.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,19 +18,29 @@ function loadLocale(lang = 'en') {
 }
 
 /**
- * Deep Scan Markdown Renderer v2.
+ * Deep Scan Markdown Renderer with Natural Developer Style (v3).
  * Strictly evidence-based with adaptive section rendering.
  */
 export function renderReadme(scanData, options = {}) {
   const lang = (options.lang || 'en').toLowerCase();
   const locale = loadLocale(lang);
   const isId = lang === 'id';
-  const isMinimal = Boolean(options.minimal);
-  const badgeStyle = options.badges || (isMinimal ? 'none' : 'flat-square');
+
+  const styleName = options.style || (options.minimal ? 'minimal' : 'plain');
+  const preset = getPreset(styleName);
+
+  const badgeStyle = options.badges || (preset.maxBadges === 0 ? 'none' : 'flat-square');
 
   // Filter allowed sections if --sections or --exclude passed
-  const allowedSections = options.sections ? new Set(options.sections.split(',').map((s) => s.trim().toLowerCase())) : null;
-  const excludedSections = options.exclude ? new Set(options.exclude.split(',').map((s) => s.trim().toLowerCase())) : new Set();
+  const allowedSections = options.sections
+    ? new Set(options.sections.split(',').map((s) => s.trim().toLowerCase()))
+    : preset.allowedSections
+      ? new Set(preset.allowedSections)
+      : null;
+
+  const excludedSections = options.exclude
+    ? new Set(options.exclude.split(',').map((s) => s.trim().toLowerCase()))
+    : new Set();
 
   function isSectionEnabled(key) {
     if (excludedSections.has(key.toLowerCase())) return false;
@@ -60,22 +72,22 @@ export function renderReadme(scanData, options = {}) {
 
   // 1. Title & Badges
   const badgesList = [];
-  if (badgeStyle !== 'none') {
+  if (badgeStyle !== 'none' && preset.maxBadges > 0) {
     if (dominantLanguage) {
       badgesList.push(`![${dominantLanguage.name}](https://img.shields.io/badge/language-${encodeURIComponent(dominantLanguage.name)}-${dominantLanguage.color || 'blue'}?style=${badgeStyle})`);
     }
     if (repoMeta?.license) {
       badgesList.push(`![License](https://img.shields.io/badge/license-${encodeURIComponent(repoMeta.license)}-success?style=${badgeStyle})`);
     }
-    if (docker?.supported) {
+    if (docker?.supported && badgesList.length < preset.maxBadges) {
       badgesList.push(`![Docker](https://img.shields.io/badge/docker-supported-2496ED?style=${badgeStyle}&logo=docker&logoColor=white)`);
     }
-    if (repoMeta?.git?.isGitHub) {
+    if (repoMeta?.git?.isGitHub && badgesList.length < preset.maxBadges) {
       badgesList.push(`![Stars](https://img.shields.io/github/stars/${repoMeta.git.owner}/${repoMeta.git.repo}?style=${badgeStyle})`);
     }
   }
 
-  // 2. Description
+  // 2. Description / About
   let description = scanData.description || scanData.context?.existingReadmeDescription || '';
   if (!description) {
     description = isId
@@ -86,7 +98,14 @@ export function renderReadme(scanData, options = {}) {
   // 3. Features (Strictly evidence-based, skipped if < 2 evidence items)
   if (isSectionEnabled('features')) {
     if (features?.hasEnoughEvidence) {
-      const featContent = features.items.map((item) => (isId ? item.id : item.en)).join('\n\n');
+      const featContent = features.items
+        .map((item) => {
+          const text = isId ? item.id : item.en;
+          // Clean text: avoid repetitive "- **Bold**:" pattern per PRD Section 7.2
+          return `- ${text.replace(/^\*\*(.*?)\*\*:\s*/, '$1: ')}`;
+        })
+        .join('\n');
+
       sections.push({
         key: 'features',
         title: locale.sections.features,
@@ -106,36 +125,36 @@ export function renderReadme(scanData, options = {}) {
     }
   }
 
-  // 4. Tech Stack (Categorized table)
+  // 4. Tech Stack
   if (isSectionEnabled('stack')) {
     const stackRows = [];
     if (dominantLanguage) {
       const allLangs = languages?.length > 1
         ? `${dominantLanguage.name} (${dominantLanguage.linePercentage}%), ${languages.slice(1).map((l) => `${l.name} (${l.linePercentage}%)`).join(', ')}`
         : dominantLanguage.name;
-      stackRows.push(`| **Primary Language** | ${allLangs} |`);
+      stackRows.push(`| Primary Language | ${allLangs} |`);
     }
     if (frameworks?.categorized?.frontend?.length > 0) {
-      stackRows.push(`| **Frontend** | ${frameworks.categorized.frontend.map((f) => `\`${f.name}\``).join(', ')} |`);
+      stackRows.push(`| Frontend | ${frameworks.categorized.frontend.map((f) => `\`${f.name}\``).join(', ')} |`);
     }
     if (frameworks?.categorized?.backend?.length > 0) {
-      stackRows.push(`| **Backend / API** | ${frameworks.categorized.backend.map((f) => `\`${f.name}\``).join(', ')} |`);
+      stackRows.push(`| Backend / API | ${frameworks.categorized.backend.map((f) => `\`${f.name}\``).join(', ')} |`);
     }
     if (frameworks?.categorized?.database?.length > 0) {
-      stackRows.push(`| **Database / ORM** | ${frameworks.categorized.database.map((d) => `\`${d.name}\``).join(', ')} |`);
+      stackRows.push(`| Database / ORM | ${frameworks.categorized.database.map((d) => `\`${d.name}\``).join(', ')} |`);
     }
     if (frameworks?.categorized?.styling?.length > 0) {
-      stackRows.push(`| **Styling** | ${frameworks.categorized.styling.map((s) => `\`${s.name}\``).join(', ')} |`);
+      stackRows.push(`| Styling | ${frameworks.categorized.styling.map((s) => `\`${s.name}\``).join(', ')} |`);
     }
     if (frameworks?.categorized?.validation?.length > 0) {
-      stackRows.push(`| **Validation** | ${frameworks.categorized.validation.map((v) => `\`${v.name}\``).join(', ')} |`);
+      stackRows.push(`| Validation | ${frameworks.categorized.validation.map((v) => `\`${v.name}\``).join(', ')} |`);
     }
     if (testing?.frameworks?.length > 0) {
-      stackRows.push(`| **Testing** | ${testing.frameworks.map((t) => `\`${t}\``).join(', ')} |`);
+      stackRows.push(`| Testing | ${testing.frameworks.map((t) => `\`${t}\``).join(', ')} |`);
     }
     if (docker?.supported || cicd?.platforms?.length > 0) {
       const devopsItems = (docker?.supported ? ['Docker'] : []).concat(cicd.platforms || []);
-      stackRows.push(`| **DevOps & Infra** | ${devopsItems.map((d) => `\`${d}\``).join(', ')} |`);
+      stackRows.push(`| DevOps & Infra | ${devopsItems.map((d) => `\`${d}\``).join(', ')} |`);
     }
 
     if (stackRows.length > 0) {
@@ -161,7 +180,7 @@ export function renderReadme(scanData, options = {}) {
     });
   }
 
-  // 6. Prerequisites & Installation (lockfile-accurate)
+  // 6. Prerequisites & Installation
   if (isSectionEnabled('prerequisites')) {
     const scriptsData = scanData.scriptsInfo || scanData.scripts || {};
     const pm = scriptsData.packageManager || scanData.packageManager || 'npm';
@@ -191,8 +210,8 @@ export function renderReadme(scanData, options = {}) {
       '| --- | --- | --- | --- |',
     ];
     for (const v of envVars.variables) {
-      const statusText = v.required ? '**Required**' : 'Optional';
-      const inEx = v.inExample ? '✅ Yes' : '⚠️ No';
+      const statusText = v.required ? 'Required' : 'Optional';
+      const inEx = v.inExample ? (preset.allowEmojis ? '✅ Yes' : 'Yes') : (preset.allowEmojis ? '⚠️ No' : 'No');
       rows.push(`| \`${v.name}\` | ${statusText} | ${inEx} | ${v.description} |`);
     }
     const envContent = [
@@ -213,7 +232,7 @@ export function renderReadme(scanData, options = {}) {
   if (isSectionEnabled('usage')) {
     const usageParts = [];
     if (scanData.runCommand) {
-      usageParts.push(`To run or start the application:\n\`\`\`bash\n${scanData.runCommand}\n\`\`\`\n`);
+      usageParts.push(`To run the application:\n\`\`\`bash\n${scanData.runCommand}\n\`\`\`\n`);
     }
 
     const scriptsData = scanData.scriptsInfo || scanData.scripts;
@@ -253,12 +272,12 @@ export function renderReadme(scanData, options = {}) {
   if (isSectionEnabled('docker') && docker?.supported) {
     const dockerLines = ['### Docker Usage\n'];
     if (docker.hasCompose) {
-      dockerLines.push('Run all container services:\n```bash\ndocker compose up -d\n```\n');
+      dockerLines.push('Run container services:\n```bash\ndocker compose up -d\n```\n');
       if (docker.services.length > 0) {
         dockerLines.push('| Service | Image | Ports |');
         dockerLines.push('| --- | --- | --- |');
         for (const s of docker.services) {
-          dockerLines.push(`| **${s.name}** | \`${s.image || 'build'}\` | ${s.ports.map((p) => `\`${p}\``).join(', ') || '-'} |`);
+          dockerLines.push(`| ${s.name} | \`${s.image || 'build'}\` | ${s.ports.map((p) => `\`${p}\``).join(', ') || '-'} |`);
         }
       }
     } else {
@@ -299,9 +318,9 @@ export function renderReadme(scanData, options = {}) {
   // 11. Database & Models
   if (isSectionEnabled('database') && database?.found) {
     const dbLines = [];
-    dbLines.push(`- **Database Engines**: ${database.databases.join(', ') || 'Relational'}`);
+    dbLines.push(`Database Engines: ${database.databases.join(', ') || 'Relational'}`);
     if (database.orms.length > 0) {
-      dbLines.push(`- **ORM / Query Builder**: ${database.orms.join(', ')}`);
+      dbLines.push(`ORM / Query Builder: ${database.orms.join(', ')}`);
     }
     if (database.migrationCommand) {
       dbLines.push(`\nRun database migrations:\n\`\`\`bash\n${database.migrationCommand}\n\`\`\`\n`);
@@ -310,7 +329,7 @@ export function renderReadme(scanData, options = {}) {
       dbLines.push('| Data Model | Estimated Fields |');
       dbLines.push('| --- | --- |');
       for (const m of database.models) {
-        dbLines.push(`| **${m.name}** | ${m.fieldsCount} fields |`);
+        dbLines.push(`| ${m.name} | ${m.fieldsCount} fields |`);
       }
     }
 
@@ -353,11 +372,11 @@ export function renderReadme(scanData, options = {}) {
     if (testing.testCommand) {
       tLines.push(`Execute automated tests:\n\`\`\`bash\n${testing.testCommand}\n\`\`\`\n`);
     }
-    if (testing.frameworks.length > 0) tLines.push(`- **Test Frameworks**: ${testing.frameworks.join(', ')}`);
-    if (testing.linters.length > 0) tLines.push(`- **Linters**: ${testing.linters.join(', ')}`);
-    if (testing.formatters.length > 0) tLines.push(`- **Formatters**: ${testing.formatters.join(', ')}`);
-    if (testing.typeCheckers.length > 0) tLines.push(`- **Type Checking**: ${testing.typeCheckers.join(', ')}`);
-    if (testing.gitHooks.length > 0) tLines.push(`- **Git Hooks**: ${testing.gitHooks.join(', ')}`);
+    if (testing.frameworks.length > 0) tLines.push(`Test Frameworks: ${testing.frameworks.join(', ')}`);
+    if (testing.linters.length > 0) tLines.push(`Linters: ${testing.linters.join(', ')}`);
+    if (testing.formatters.length > 0) tLines.push(`Formatters: ${testing.formatters.join(', ')}`);
+    if (testing.typeCheckers.length > 0) tLines.push(`Type Checking: ${testing.typeCheckers.join(', ')}`);
+    if (testing.gitHooks.length > 0) tLines.push(`Git Hooks: ${testing.gitHooks.join(', ')}`);
 
     sections.push({
       key: 'testing',
@@ -370,20 +389,21 @@ export function renderReadme(scanData, options = {}) {
 
   // 14. Security Posture
   if (isSectionEnabled('security')) {
+    const verifiedStatus = preset.allowEmojis ? '✅ Verified' : 'Verified';
     const secLines = [
-      `> ℹ️ _${locale.labels.disclaimer}_\n`,
+      `_${locale.labels.disclaimer}_\n`,
       `| Practice | Status |`,
       '| --- | --- |',
     ];
 
     for (const v of security.verifiedChecks) {
-      secLines.push(`| ${v.title} | ✅ Verified |`);
+      secLines.push(`| ${v.title} | ${verifiedStatus} |`);
     }
 
     if (security.missingSuggestions.length > 0) {
       secLines.push(`\n### ${locale.labels.recommendations}\n`);
       for (const s of security.missingSuggestions.slice(0, 3)) {
-        secLines.push(`- **${s.title}**: ${s.suggestion}`);
+        secLines.push(`- ${s.title}: ${s.suggestion}`);
       }
     }
 
@@ -403,11 +423,11 @@ export function renderReadme(scanData, options = {}) {
       ciLines.push('| Workflow | Triggers | File |');
       ciLines.push('| --- | --- | --- |');
       for (const w of cicd.workflows) {
-        ciLines.push(`| **${w.name}** | \`${w.triggers.join(', ') || 'push'}\` | \`${w.file}\` |`);
+        ciLines.push(`| ${w.name} | \`${w.triggers.join(', ') || 'push'}\` | \`${w.file}\` |`);
       }
     }
     if (cicd.platforms.length > 0) {
-      ciLines.push(`\n- **Target Platforms**: ${cicd.platforms.join(', ')}`);
+      ciLines.push(`\nTarget Platforms: ${cicd.platforms.join(', ')}`);
     }
 
     sections.push({
@@ -423,15 +443,10 @@ export function renderReadme(scanData, options = {}) {
   if (isSectionEnabled('contributing')) {
     const docFile = repoMeta.docs.contributing;
     const contContent = docFile
-      ? `Please review [${docFile}](${docFile}) for contributing guidelines and pull request instructions.`
-      : [
-          'Contributions are welcome! Please follow these steps:',
-          '1. Fork the repository.',
-          '2. Create a new feature branch (`git checkout -b feature/my-feature`).',
-          '3. Commit your changes (`git commit -m "Add my feature"`).',
-          '4. Push to the branch (`git push origin feature/my-feature`).',
-          '5. Open a Pull Request.',
-        ].join('\n');
+      ? `See [${docFile}](${docFile}) for contributing guidelines and pull request instructions.`
+      : (isId
+          ? 'Kontribusi dan pull request dipersilakan. Untuk perubahan besar, silakan buka issue terlebih dahulu.'
+          : 'Contributions and pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.');
 
     sections.push({
       key: 'contributing',
@@ -460,33 +475,49 @@ export function renderReadme(scanData, options = {}) {
     });
   }
 
-  // 18. Authors
+  // 18. Authors (only if author known, without flowery marketing prose)
   if (isSectionEnabled('authors') && repoMeta.author) {
     sections.push({
       key: 'authors',
       title: locale.sections.authors,
       slug: 'authors--acknowledgments',
-      content: `Maintained with care by **${repoMeta.author}**.`,
+      content: `Maintained by **${repoMeta.author}**.`,
       evidenceCount: 1,
     });
   }
 
-  // Assemble TOC
-  const tocList = [];
-  for (const s of sections) {
-    tocList.push(`- [${s.title}](#${s.slug})`);
+  // Enforce preset section limit (e.g. max 8 sections on plain)
+  let activeSections = sections;
+  if (preset.maxSections && sections.length > preset.maxSections) {
+    // Keep high priority sections first
+    const priority = ['features', 'stack', 'architecture', 'prerequisites', 'usage', 'env', 'api', 'database', 'license', 'contributing'];
+    activeSections = sections
+      .sort((a, b) => {
+        const idxA = priority.indexOf(a.key);
+        const idxB = priority.indexOf(b.key);
+        return (idxA >= 0 ? idxA : 99) - (idxB >= 0 ? idxB : 99);
+      })
+      .slice(0, preset.maxSections);
   }
 
   // Check if --merge or --update was requested and existing README is present
   if ((options.merge || options.update) && options.existingContent) {
-    const merged = mergeReadme(options.existingContent, sections);
+    const merged = mergeReadme(options.existingContent, activeSections);
     if (merged) {
+      const linted = options.noLint ? { output: merged, score: 100, violations: [] } : lintMarkdown(merged, { style: preset.name, lang });
       return {
-        markdown: merged,
-        sections,
-        summary: computeSummary(sections, security.warnings),
+        markdown: linted.output,
+        sections: activeSections,
+        summary: computeSummary(activeSections, security.warnings),
+        lint: linted,
       };
     }
+  }
+
+  // Assemble TOC if needed
+  const tocList = [];
+  for (const s of activeSections) {
+    tocList.push(`- [${s.title}](#${s.slug})`);
   }
 
   // Build full markdown document
@@ -494,27 +525,33 @@ export function renderReadme(scanData, options = {}) {
   parts.push(`# ${repoMeta.projectName}\n`);
 
   if (badgesList.length > 0) {
-    parts.push(badgesList.join(' ') + '\n');
+    parts.push(badgesList.slice(0, preset.maxBadges).join(' ') + '\n');
   }
 
   parts.push(description + '\n');
 
-  if (sections.length > 1) {
+  // TOC only if forceToc or meets thresholds
+  if (preset.forceToc) {
     parts.push(`## ${locale.tocTitle}\n\n${tocList.join('\n')}\n`);
   }
 
-  for (const s of sections) {
-    // When writing fresh or in merge mode, wrap sections with marker comments
+  for (const s of activeSections) {
     const wrappedContent = wrapWithMarkers(s.key, s.content);
     parts.push(`## ${s.title}\n\n${wrappedContent}\n`);
   }
 
-  const markdown = parts.join('\n').trim() + '\n';
+  const rawMarkdown = parts.join('\n').trim() + '\n';
+
+  // Apply style linter post-processor per PRD Section 7.4
+  const linted = options.noLint
+    ? { output: rawMarkdown, score: 100, violations: [] }
+    : lintMarkdown(rawMarkdown, { style: preset.name, lang });
 
   return {
-    markdown,
-    sections,
-    summary: computeSummary(sections, security.warnings),
+    markdown: linted.output,
+    sections: activeSections,
+    summary: computeSummary(activeSections, security.warnings),
+    lint: linted,
   };
 }
 

@@ -1,0 +1,51 @@
+[
+  {
+    "input": {
+      "project": {
+        "name": "inventory-api",
+        "type": ["backend", "api"],
+        "declaredDescription": "REST API for inventory tracking"
+      },
+      "stack": {
+        "languages": [{ "name": "TypeScript", "share": 0.95 }],
+        "backend": ["Fastify"],
+        "database": ["PostgreSQL", "Prisma"],
+        "auth": ["JWT"]
+      },
+      "evidence": {
+        "featuresCandidates": ["JWT Authentication", "PostgreSQL database with Prisma", "REST endpoints for items"]
+      }
+    },
+    "output": {
+      "description": "REST API for inventory tracking built with TypeScript and Fastify. Persists data to PostgreSQL using Prisma and authenticates requests with JWT.",
+      "about": "Backend service managing inventory items and stock movements.",
+      "features": [
+        { "id": "JWT Authentication", "text": "Token-based request authorization using JWT." },
+        { "id": "PostgreSQL database with Prisma", "text": "Type-safe database queries and migrations with Prisma." },
+        { "id": "REST endpoints for items", "text": "CRUD operations for inventory items." }
+      ],
+      "architecture": "Structured as route handlers, business logic services, and Prisma database models."
+    }
+  },
+  {
+    "input": {
+      "project": {
+        "name": "csv-parser",
+        "type": ["cli"],
+        "declaredDescription": "Small CLI utility to parse CSV files"
+      },
+      "stack": {
+        "languages": [{ "name": "Go", "share": 1.0 }]
+      },
+      "evidence": {
+        "featuresCandidates": []
+      }
+    },
+    "output": {
+      "description": "Command-line utility written in Go for parsing CSV files.",
+      "about": "",
+      "features": [],
+      "architecture": ""
+    }
+  }
+]

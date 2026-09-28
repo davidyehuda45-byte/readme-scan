@@ -1,7 +1,7 @@
 {
   "name": "auto-readme",
-  "version": "1.0.0",
-  "description": "Blazing-fast, zero-config, 100% offline CLI tool to generate professional README.md files for any project.",
+  "version": "3.0.0",
+  "description": "Evidence-based, 100% offline CLI tool to generate professional, natural developer-written README.md files.",
   "type": "module",
   "main": "./src/cli.js",
   "bin": {
