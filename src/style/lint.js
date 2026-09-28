@@ -124,11 +124,21 @@ export function lintMarkdown(markdown, options = {}) {
       }
     }
 
-    // 5. Exclamation marks in prose (excluding markdown images like ![...])
+    // 5. Exclamation marks in prose (excluding markdown images, HTML comments, and inline code)
     if (preset.stripExclamations) {
-      // Temporarily mask markdown images: ![alt](url)
       const images = [];
-      const masked = line.replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (match) => {
+      const comments = [];
+      const inlineCodes = [];
+
+      let masked = line.replace(/`([^`]+)`/g, (match) => {
+        inlineCodes.push(match);
+        return `__CODE_${inlineCodes.length - 1}__`;
+      });
+      masked = masked.replace(/<!--[\s\S]*?-->/g, (match) => {
+        comments.push(match);
+        return `__COMMENT_${comments.length - 1}__`;
+      });
+      masked = masked.replace(/!\[([^\]]*)\]\(([^)]*)\)/g, (match) => {
         images.push(match);
         return `__IMG_${images.length - 1}__`;
       });
@@ -140,8 +150,10 @@ export function lintMarkdown(markdown, options = {}) {
           message: `Exclamation mark detected on line ${lineNum}`,
         });
         if (shouldFix) {
-          const stripped = masked.replace(/!+/g, '.').replace(/\.{2,}/g, '.');
-          line = stripped.replace(/__IMG_(\d+)__/g, (_, idx) => images[Number(idx)]);
+          let stripped = masked.replace(/!+/g, '.').replace(/\.{2,}/g, '.');
+          stripped = stripped.replace(/__IMG_(\d+)__/g, (_, idx) => images[Number(idx)]);
+          stripped = stripped.replace(/__COMMENT_(\d+)__/g, (_, idx) => comments[Number(idx)]);
+          line = stripped.replace(/__CODE_(\d+)__/g, (_, idx) => inlineCodes[Number(idx)]);
         }
       }
     }
