@@ -4,7 +4,7 @@
   "description": "Generate a README.md by scanning your project. Runs locally, no API key needed.",
   "type": "module",
   "bin": {
-    "readme-scan": "./bin/readme-scan.js"
+    "readme-scan": "bin/readme-scan.js"
   },
   "exports": {
     ".": "./src/index.js",
