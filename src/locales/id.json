@@ -1,0 +1,40 @@
+{
+  "tocTitle": "Daftar Isi",
+  "sections": {
+    "features": "Fitur",
+    "stack": "Tech Stack",
+    "architecture": "Arsitektur & Struktur Proyek",
+    "prerequisites": "Prasyarat & Instalasi",
+    "env": "Konfigurasi & Variabel Lingkungan",
+    "usage": "Cara Menjalankan",
+    "docker": "Docker & Kontainerisasi",
+    "api": "Dokumentasi API",
+    "database": "Database & Model Data",
+    "frontend": "Struktur Frontend",
+    "testing": "Pengujian & Kualitas Kode",
+    "security": "Postur Keamanan",
+    "cicd": "CI/CD & Deployment",
+    "contributing": "Kontribusi",
+    "changelog": "Catatan Rilis (Changelog)",
+    "license": "Lisensi",
+    "authors": "Pembuat & Kredit"
+  },
+  "labels": {
+    "prerequisites": "Prasyarat",
+    "setupInstructions": "Langkah Instalasi",
+    "cloneRepo": "1. Clone repository:",
+    "installDeps": "2. Install dependensi:",
+    "availableScripts": "Perintah yang Tersedia",
+    "command": "Perintah",
+    "description": "Keterangan",
+    "method": "Metode",
+    "path": "Jalur Endpoint",
+    "source": "File Sumber",
+    "variable": "Variabel",
+    "status": "Status",
+    "verified": "Praktik Terverifikasi",
+    "recommendations": "Saran Keamanan",
+    "disclaimer": "Penilaian keamanan berbasis analisis dependensi dan konfigurasi statis, bukan audit penetrasi dinamis.",
+    "moreEndpoints": "... dan {count} endpoint lainnya."
+  }
+}

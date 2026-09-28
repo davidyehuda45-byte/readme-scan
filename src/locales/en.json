@@ -1,0 +1,40 @@
+{
+  "tocTitle": "Table of Contents",
+  "sections": {
+    "features": "Features",
+    "stack": "Tech Stack",
+    "architecture": "Architecture & Project Structure",
+    "prerequisites": "Prerequisites & Installation",
+    "env": "Configuration & Environment Variables",
+    "usage": "Usage & Execution",
+    "docker": "Docker & Containerization",
+    "api": "API Documentation",
+    "database": "Database & Models",
+    "frontend": "Frontend Overview",
+    "testing": "Testing & Code Quality",
+    "security": "Security Posture",
+    "cicd": "CI/CD & Deployment",
+    "contributing": "Contributing",
+    "changelog": "Changelog",
+    "license": "License",
+    "authors": "Authors & Acknowledgments"
+  },
+  "labels": {
+    "prerequisites": "Prerequisites",
+    "setupInstructions": "Setup Instructions",
+    "cloneRepo": "1. Clone the repository:",
+    "installDeps": "2. Install dependencies:",
+    "availableScripts": "Available Scripts",
+    "command": "Command",
+    "description": "Description",
+    "method": "Method",
+    "path": "Endpoint Path",
+    "source": "Source File",
+    "variable": "Variable",
+    "status": "Status",
+    "verified": "Verified Practice",
+    "recommendations": "Security Recommendations",
+    "disclaimer": "Security assessment is based on static dependency and configuration analysis, not a dynamic penetration test.",
+    "moreEndpoints": "... and {count} more endpoints."
+  }
+}

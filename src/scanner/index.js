@@ -1,11 +1,24 @@
 import path from 'node:path';
+import { ProjectContext } from './context.js';
 import { detectLanguages } from './language.js';
 import { generateProjectTree } from './file-tree.js';
-import { detectGit, parseGitUrl } from './git.js';
-import { detectLicense } from './license.js';
-import { detectDocker } from './docker.js';
-import { detectEnvExample } from './env.js';
 
+import { detectProjectType } from '../detectors/project-type.js';
+import { detectFrameworks } from '../detectors/frameworks.js';
+import { detectDatabase } from '../detectors/database.js';
+import { detectApiEndpoints } from '../detectors/api-endpoints.js';
+import { detectFrontend } from '../detectors/frontend.js';
+import { detectAuth } from '../detectors/auth.js';
+import { detectSecurity } from '../detectors/security.js';
+import { detectTesting } from '../detectors/testing.js';
+import { detectCicd } from '../detectors/cicd.js';
+import { detectDocker } from '../detectors/docker.js';
+import { detectEnvVars } from '../detectors/env-vars.js';
+import { detectScripts } from '../detectors/scripts.js';
+import { detectRepoMeta } from '../detectors/repo-meta.js';
+import { detectFeatures } from '../detectors/features.js';
+
+// Backward compatibility detectors
 import { detectNode } from './ecosystems/node.js';
 import { detectPython } from './ecosystems/python.js';
 import { detectRust } from './ecosystems/rust.js';
@@ -15,168 +28,138 @@ import { detectJava } from './ecosystems/java.js';
 import { detectRuby } from './ecosystems/ruby.js';
 
 /**
- * Scan a project directory and collect all metadata.
+ * Deep scan entrypoint per PRD v2.
+ * Executes modular, evidence-based detectors with error safety.
  */
 export async function scanProject(targetDir, options = {}) {
   const rootDir = path.resolve(targetDir || '.');
-  const folderName = path.basename(rootDir);
+  const context = await ProjectContext.create(rootDir, options);
 
+  // Run general scanners and detectors in parallel
   const [
     langResult,
     fileTree,
-    detectedGit,
-    licenseInfo,
-    dockerInfo,
-    envInfo,
-    nodeInfo,
-    pythonInfo,
-    rustInfo,
-    goInfo,
-    phpInfo,
-    javaInfo,
-    rubyInfo,
+    projectType,
+    frameworks,
+    database,
+    endpoints,
+    frontend,
+    auth,
+    security,
+    testing,
+    cicd,
+    docker,
+    envVars,
+    scripts,
+    repoMeta,
+    nodeLegacy,
+    pythonLegacy,
+    rustLegacy,
+    goLegacy,
+    phpLegacy,
+    javaLegacy,
+    rubyLegacy,
   ] = await Promise.all([
-    detectLanguages(rootDir),
-    generateProjectTree(rootDir, options.depth || 2),
-    detectGit(rootDir),
-    detectLicense(rootDir),
-    detectDocker(rootDir),
-    detectEnvExample(rootDir),
-    detectNode(rootDir),
-    detectPython(rootDir),
-    detectRust(rootDir),
-    detectGo(rootDir),
-    detectPhp(rootDir),
-    detectJava(rootDir),
-    detectRuby(rootDir),
+    safeRun(() => detectLanguages(rootDir), { dominant: null, languages: [] }),
+    safeRun(() => generateProjectTree(rootDir, options.depth || 2), ''),
+    safeRun(() => detectProjectType(context), { primaryType: 'Software Application' }),
+    safeRun(() => detectFrameworks(context), { categorized: {} }),
+    safeRun(() => detectDatabase(context), { found: false, databases: [], orms: [], models: [] }),
+    safeRun(() => detectApiEndpoints(context), { found: false, endpoints: [], totalCount: 0 }),
+    safeRun(() => detectFrontend(context), { found: false, pages: [], features: [] }),
+    safeRun(() => detectAuth(context), { found: false, methods: [] }),
+    safeRun(() => detectSecurity(context), { verifiedChecks: [], missingSuggestions: [], warnings: [] }),
+    safeRun(() => detectTesting(context), { found: false, frameworks: [], linters: [], formatters: [] }),
+    safeRun(() => detectCicd(context), { found: false, workflows: [], platforms: [] }),
+    safeRun(() => detectDocker(context), { supported: false, services: [] }),
+    safeRun(() => detectEnvVars(context), { found: false, variables: [] }),
+    safeRun(() => detectScripts(context), { packageManager: 'npm', installCommand: 'npm install', categorizedScripts: { dev: [], build: [], test: [], lint: [], database: [], other: [] } }),
+    safeRun(() => detectRepoMeta(context), { projectName: path.basename(rootDir), cloneUrl: '<repository-url>', docs: {} }),
+    safeRun(() => detectNode(rootDir), null),
+    safeRun(() => detectPython(rootDir), null),
+    safeRun(() => detectRust(rootDir), null),
+    safeRun(() => detectGo(rootDir), null),
+    safeRun(() => detectPhp(rootDir), null),
+    safeRun(() => detectJava(rootDir), null),
+    safeRun(() => detectRuby(rootDir), null),
   ]);
 
+  // Backward compatibility ecosystem data
   const detectedEcosystems = [];
   const ecosystemData = {};
+  if (nodeLegacy) { detectedEcosystems.push('node'); ecosystemData.node = nodeLegacy; }
+  if (pythonLegacy) { detectedEcosystems.push('python'); ecosystemData.python = pythonLegacy; }
+  if (rustLegacy) { detectedEcosystems.push('rust'); ecosystemData.rust = rustLegacy; }
+  if (goLegacy) { detectedEcosystems.push('go'); ecosystemData.go = goLegacy; }
+  if (phpLegacy) { detectedEcosystems.push('php'); ecosystemData.php = phpLegacy; }
+  if (javaLegacy) { detectedEcosystems.push('java'); ecosystemData.java = javaLegacy; }
+  if (rubyLegacy) { detectedEcosystems.push('ruby'); ecosystemData.ruby = rubyLegacy; }
 
-  if (nodeInfo) {
-    detectedEcosystems.push('node');
-    ecosystemData.node = nodeInfo;
-  }
-  if (pythonInfo) {
-    detectedEcosystems.push('python');
-    ecosystemData.python = pythonInfo;
-  }
-  if (rustInfo) {
-    detectedEcosystems.push('rust');
-    ecosystemData.rust = rustInfo;
-  }
-  if (goInfo) {
-    detectedEcosystems.push('go');
-    ecosystemData.go = goInfo;
-  }
-  if (phpInfo) {
-    detectedEcosystems.push('php');
-    ecosystemData.php = phpInfo;
-  }
-  if (javaInfo) {
-    detectedEcosystems.push('java');
-    ecosystemData.java = javaInfo;
-  }
-  if (rubyInfo) {
-    detectedEcosystems.push('ruby');
-    ecosystemData.ruby = rubyInfo;
-  }
+  // Synthesize features strictly from verified detector results
+  const features = await safeRun(
+    () =>
+      detectFeatures(context, {
+        auth,
+        docker,
+        testing,
+        endpoints,
+        frontend,
+        database,
+        cicd,
+      }),
+    { found: false, items: [], count: 0, hasEnoughEvidence: false }
+  );
 
-  // Determine primary ecosystem
   let primaryEcosystem = 'generic';
-
-  // Allow manual override via --ecosystem option
   if (options.ecosystem && ecosystemData[options.ecosystem]) {
     primaryEcosystem = options.ecosystem;
   } else if (detectedEcosystems.length > 0) {
-    if (langResult.dominant) {
-      const dom = langResult.dominant.name.toLowerCase();
-      if ((dom === 'javascript' || dom === 'typescript') && ecosystemData.node) {
-        primaryEcosystem = 'node';
-      } else if (dom === 'python' && ecosystemData.python) {
-        primaryEcosystem = 'python';
-      } else if (dom === 'rust' && ecosystemData.rust) {
-        primaryEcosystem = 'rust';
-      } else if (dom === 'go' && ecosystemData.go) {
-        primaryEcosystem = 'go';
-      } else if (dom === 'php' && ecosystemData.php) {
-        primaryEcosystem = 'php';
-      } else if ((dom === 'java' || dom === 'kotlin') && ecosystemData.java) {
-        primaryEcosystem = 'java';
-      } else if (dom === 'ruby' && ecosystemData.ruby) {
-        primaryEcosystem = 'ruby';
-      } else {
-        primaryEcosystem = detectedEcosystems[0];
-      }
-    } else {
-      primaryEcosystem = detectedEcosystems[0];
-    }
-  }
-
-  // Fallback git remote from package.json or Cargo.toml if .git was absent
-  let gitInfo = detectedGit;
-  if (!gitInfo) {
-    const rawRepo = ecosystemData.node?.repoUrl || ecosystemData.rust?.repository;
-    if (rawRepo) {
-      gitInfo = parseGitUrl(rawRepo);
-    }
-  }
-
-  // Resolve metadata: name, description, version, license, author
-  let projectName = folderName;
-  let description = '';
-  let version = '1.0.0';
-  let author = '';
-  let license = licenseInfo ? licenseInfo.spdxId : '';
-  let installCommand = '';
-  let runCommand = '';
-  let testCommand = '';
-  let scripts = {};
-
-  if (primaryEcosystem !== 'generic') {
-    const primaryData = ecosystemData[primaryEcosystem];
-    if (primaryData.name) projectName = primaryData.name;
-    if (primaryData.description) description = primaryData.description;
-    if (primaryData.version) version = primaryData.version;
-    if (primaryData.author) author = primaryData.author;
-    if (!license && primaryData.license) license = primaryData.license;
-    if (primaryData.installCommand) installCommand = primaryData.installCommand;
-    if (primaryData.runCommand) runCommand = primaryData.runCommand;
-    if (primaryData.testCommand) testCommand = primaryData.testCommand;
-    if (primaryData.scripts) scripts = primaryData.scripts;
-  } else {
-    if (langResult.dominant) {
-      const dom = langResult.dominant.name.toLowerCase();
-      if (dom === 'c' || dom === 'c++') {
-        installCommand = 'make';
-        runCommand = './app';
-      } else if (dom === 'shell') {
-        runCommand = 'bash script.sh';
-      }
-    }
+    primaryEcosystem = detectedEcosystems[0];
   }
 
   return {
     rootDir,
-    projectName,
-    description,
-    version,
-    author,
-    license,
-    licenseInfo,
+    context,
+    projectName: repoMeta.projectName,
+    description: repoMeta.description || nodeLegacy?.description || context.existingReadmeDescription || '',
+    version: nodeLegacy?.version || pythonLegacy?.version || rustLegacy?.version || '1.0.0',
     primaryEcosystem,
     ecosystems: detectedEcosystems,
     ecosystemData,
     dominantLanguage: langResult.dominant,
     languages: langResult.languages,
-    git: gitInfo,
-    docker: dockerInfo,
-    envExample: envInfo,
     fileTree,
-    installCommand,
-    runCommand,
-    testCommand,
-    scripts,
+    installCommand: scripts.installCommand,
+    runCommand: nodeLegacy?.devCommand || pythonLegacy?.runCommand || rustLegacy?.runCommand || goLegacy?.runCommand || '',
+    testCommand: testing.testCommand || (scripts.rawScripts?.test ? `npm test` : ''),
+    scripts: scripts.rawScripts,
+    scriptsInfo: scripts,
+    git: repoMeta.git,
+    license: repoMeta.license,
+    licenseInfo: repoMeta.licenseInfo,
+    docker,
+    envExample: envVars.found ? { file: envVars.exampleFile, variables: envVars.variables } : null,
+    // Deep scan additions
+    projectType,
+    frameworks,
+    database,
+    endpoints,
+    frontend,
+    auth,
+    security,
+    testing,
+    cicd,
+    envVars,
+    repoMeta,
+    features,
   };
+}
+
+async function safeRun(fn, fallback) {
+  try {
+    const res = await fn();
+    return res !== null && res !== undefined ? res : fallback;
+  } catch (err) {
+    return fallback;
+  }
 }

@@ -1,0 +1,67 @@
+{
+  "checks": [
+    {
+      "id": "security-headers",
+      "title": "Security Headers",
+      "dependencies": ["helmet", "secure", "django-secure"],
+      "files": [],
+      "suggestion": "No security headers package detected. Consider adding Helmet or equivalent middleware."
+    },
+    {
+      "id": "rate-limiting",
+      "title": "Rate Limiting",
+      "dependencies": ["express-rate-limit", "slowapi", "django-ratelimit", "bucket4j"],
+      "files": [],
+      "suggestion": "No rate limiting detected. Consider adding rate limiting if this is a public API."
+    },
+    {
+      "id": "cors",
+      "title": "CORS Configuration",
+      "dependencies": ["cors", "django-cors-headers", "tower-http"],
+      "files": [],
+      "suggestion": "Explicit CORS middleware not detected."
+    },
+    {
+      "id": "input-validation",
+      "title": "Input Validation & Sanitization",
+      "dependencies": ["zod", "joi", "yup", "class-validator", "pydantic", "marshmallow"],
+      "files": [],
+      "suggestion": "Schema-based input validation library (e.g. Zod, Pydantic) not detected."
+    },
+    {
+      "id": "password-hashing",
+      "title": "Secure Password Hashing",
+      "dependencies": ["bcrypt", "bcryptjs", "argon2", "scrypt"],
+      "files": [],
+      "suggestion": "Password hashing library (e.g. Argon2, bcrypt) not detected."
+    },
+    {
+      "id": "csrf-protection",
+      "title": "CSRF Protection",
+      "dependencies": ["csurf", "csrf"],
+      "files": [],
+      "suggestion": "CSRF protection middleware not detected."
+    },
+    {
+      "id": "env-separation",
+      "title": "Environment Variable Separation",
+      "dependencies": [],
+      "files": [".env.example", ".env.sample", ".env.template"],
+      "suggestion": "Ensure environment variables are decoupled and documented in .env.example."
+    },
+    {
+      "id": "dependency-audit",
+      "title": "Automated Dependency Auditing",
+      "dependencies": [],
+      "files": [".github/dependabot.yml", ".github/dependabot.yaml", "renovate.json", ".renovaterc.json"],
+      "suggestion": "Consider enabling Dependabot or Renovate for automated vulnerability scanning."
+    },
+    {
+      "id": "security-policy",
+      "title": "Security Policy (SECURITY.md)",
+      "dependencies": [],
+      "files": ["SECURITY.md", "docs/SECURITY.md", ".github/SECURITY.md"],
+      "suggestion": "Consider adding a SECURITY.md to document how security issues should be reported."
+    }
+  ]
+}

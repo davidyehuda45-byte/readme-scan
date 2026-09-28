@@ -3,6 +3,8 @@ import path from 'node:path';
 
 // Default folders and files to always ignore when scanning
 export const DEFAULT_EXCLUDES = new Set([
+  'README.md',
+  'README.generated.md',
   'node_modules',
   '.git',
   '.svn',
