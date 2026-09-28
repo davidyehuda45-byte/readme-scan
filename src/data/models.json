@@ -38,7 +38,7 @@
   "custom": {
     "defaultModel": "default",
     "recommendedModels": ["default"],
-    "envKey": "AUTO_README_API_KEY",
+    "envKey": "README_SCAN_API_KEY",
     "baseUrl": "http://localhost:1234/v1"
   }
 }

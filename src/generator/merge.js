@@ -1,32 +1,41 @@
 /**
  * Merge engine per PRD Section 6.
- * Preserves user's manual text outside of auto-readme markers.
- * Markers: <!-- auto-readme:start:<key> --> ... <!-- auto-readme:end:<key> -->
+ * Preserves user's manual text outside of readme-scan markers.
+ * Markers: <!-- readme-scan:start:<key> --> ... <!-- readme-scan:end:<key> -->
+ *
+ * Backward compatibility:
+ * Reads legacy <!-- auto-readme:* --> markers and replaces them with <!-- readme-scan:* -->.
  */
 
 export function mergeReadme(existingContent, newSections) {
-  if (!existingContent || !existingContent.includes('<!-- auto-readme:start:')) {
-    // If no previous markers exist, generate full markdown with markers
+  if (
+    !existingContent ||
+    (!existingContent.includes('<!-- readme-scan:start:') &&
+      !existingContent.includes('<!-- auto-readme:start:'))
+  ) {
+    // If no previous markers exist, return null so full markdown is generated
     return null;
   }
 
   let merged = existingContent;
 
   for (const sec of newSections) {
-    const startTag = `<!-- auto-readme:start:${sec.key} -->`;
-    const endTag = `<!-- auto-readme:end:${sec.key} -->`;
-    const regex = new RegExp(`${escapeRegExp(startTag)}[\\s\\S]*?${escapeRegExp(endTag)}`, 'g');
+    // Matches both new and legacy marker tags
+    const markerRegex = new RegExp(
+      `<!-- (?:readme-scan|auto-readme):start:${escapeRegExp(sec.key)} -->[\\s\\S]*?<!-- (?:readme-scan|auto-readme):end:${escapeRegExp(sec.key)} -->`,
+      'g'
+    );
 
-    const replacement = `${startTag}\n${sec.content}\n${endTag}`;
+    const replacement = `<!-- readme-scan:start:${sec.key} -->\n${sec.content}\n<!-- readme-scan:end:${sec.key} -->`;
 
-    if (regex.test(merged)) {
+    if (markerRegex.test(merged)) {
       if (sec.isTodo) {
-        const match = merged.match(regex);
+        const match = merged.match(markerRegex);
         if (match && !match[0].includes('<!-- TODO:')) {
           continue;
         }
       }
-      merged = merged.replace(regex, replacement);
+      merged = merged.replace(markerRegex, replacement);
     }
   }
 
@@ -34,7 +43,7 @@ export function mergeReadme(existingContent, newSections) {
 }
 
 export function wrapWithMarkers(key, content) {
-  return `<!-- auto-readme:start:${key} -->\n${content}\n<!-- auto-readme:end:${key} -->`;
+  return `<!-- readme-scan:start:${key} -->\n${content}\n<!-- readme-scan:end:${key} -->`;
 }
 
 function escapeRegExp(string) {

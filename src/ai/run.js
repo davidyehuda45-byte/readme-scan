@@ -89,7 +89,7 @@ export async function runAiEnhancement(scanData, options = {}) {
   if (providerName !== 'ollama' && !apiKey) {
     return {
       success: false,
-      error: `No API key found for provider "${providerName}". Configure one with "auto-readme auth set ${providerName}" or set the environment variable.`,
+      error: `No API key found for provider "${providerName}". Configure one with "readme-scan auth set ${providerName}" or set the environment variable.`,
       scanData,
     };
   }
@@ -146,10 +146,10 @@ export async function runAiEnhancement(scanData, options = {}) {
     const updatedScanData = { ...scanData };
 
     if (validation.data.description) {
-      updatedScanData.description = `<!-- auto-readme:ai -->\n${validation.data.description}`;
+      updatedScanData.description = `<!-- readme-scan:ai -->\n${validation.data.description}`;
     }
     if (validation.data.about) {
-      updatedScanData.about = `<!-- auto-readme:ai -->\n${validation.data.about}`;
+      updatedScanData.about = `<!-- readme-scan:ai -->\n${validation.data.about}`;
     }
     if (validation.data.features && validation.data.features.length > 0) {
       updatedScanData.features = {
@@ -164,7 +164,7 @@ export async function runAiEnhancement(scanData, options = {}) {
       };
     }
     if (validation.data.architecture) {
-      updatedScanData.aiArchitecture = `<!-- auto-readme:ai -->\n${validation.data.architecture}`;
+      updatedScanData.aiArchitecture = `<!-- readme-scan:ai -->\n${validation.data.architecture}`;
     }
 
     return {

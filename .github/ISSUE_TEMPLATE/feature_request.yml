@@ -1,0 +1,28 @@
+name: Feature Request
+description: Propose a new scanner detector, style rule, or enhancement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please keep in mind that readme-scan strictly adheres to 0 runtime dependencies and 100% offline analysis (unless explicit AI mode is requested).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Use Case
+      description: Is your feature request related to a specific workflow or ecosystem?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe what code patterns or artifacts should be detected and how they should be represented in markdown.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative implementations or approaches you have considered.

@@ -1,35 +1,53 @@
 {
-  "name": "auto-readme",
-  "version": "1.0.0",
-  "description": "Blazing-fast, zero-config, 100% offline CLI tool to generate professional README.md files for any project.",
+  "name": "readme-scan",
+  "version": "0.1.0",
+  "description": "Generate a README.md by scanning your project. Runs locally, no API key needed.",
   "type": "module",
-  "main": "./src/cli.js",
   "bin": {
-    "auto-readme": "./bin/auto-readme.js"
+    "readme-scan": "./bin/readme-scan.js"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
   },
   "files": [
     "bin",
     "src",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "scripts": {
-    "start": "node ./bin/auto-readme.js",
-    "test": "node --test test/**/*.test.js"
+    "start": "node ./bin/readme-scan.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "lint:readme": "node ./bin/readme-scan.js lint README.md",
+    "check:readme": "node ./bin/readme-scan.js --check",
+    "examples": "node ./bin/readme-scan.js --force -o examples/express-api/README.md examples/express-api",
+    "check:prepublish": "node ./scripts/prepublish-check.js",
+    "prepublishOnly": "npm run check:prepublish"
   },
   "keywords": [
     "readme",
-    "generator",
-    "cli",
-    "markdown",
+    "readme-generator",
+    "generate-readme",
     "documentation",
+    "markdown",
+    "cli",
     "developer-tools",
-    "offline",
-    "zero-config"
+    "static-analysis",
+    "offline"
   ],
   "author": "David Yehuda Surbakti",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davidyehuda45-byte/readme-scan.git"
+  },
+  "homepage": "https://github.com/davidyehuda45-byte/readme-scan#readme",
+  "bugs": {
+    "url": "https://github.com/davidyehuda45-byte/readme-scan/issues"
+  },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20"
   }
 }

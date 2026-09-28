@@ -20,6 +20,15 @@ export function getGlobalConfigPath() {
   const home = os.homedir();
   if (process.platform === 'win32') {
     const appData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
+    return path.join(appData, 'readme-scan', 'config.json');
+  }
+  return path.join(home, '.config', 'readme-scan', 'config.json');
+}
+
+export function getLegacyGlobalConfigPath() {
+  const home = os.homedir();
+  if (process.platform === 'win32') {
+    const appData = process.env.APPDATA || path.join(home, 'AppData', 'Roaming');
     return path.join(appData, 'auto-readme', 'config.json');
   }
   return path.join(home, '.config', 'auto-readme', 'config.json');
@@ -28,9 +37,22 @@ export function getGlobalConfigPath() {
 export function readGlobalConfig() {
   const cfgPath = getGlobalConfigPath();
   try {
-    if (!fs.existsSync(cfgPath)) return { keys: {} };
-    const raw = fs.readFileSync(cfgPath, 'utf8');
-    return JSON.parse(raw);
+    if (fs.existsSync(cfgPath)) {
+      const raw = fs.readFileSync(cfgPath, 'utf8');
+      return JSON.parse(raw);
+    }
+
+    // Check for legacy configuration migration
+    const legacyPath = getLegacyGlobalConfigPath();
+    if (fs.existsSync(legacyPath)) {
+      const rawLegacy = fs.readFileSync(legacyPath, 'utf8');
+      const data = JSON.parse(rawLegacy);
+      writeGlobalConfig(data);
+      console.log('Notice: Copied legacy configuration from auto-readme to readme-scan.');
+      return data;
+    }
+
+    return { keys: {} };
   } catch {
     return { keys: {} };
   }
@@ -56,7 +78,7 @@ export function maskKey(key) {
  *
  * Search precedence:
  * 1. CLI flag --api-key
- * 2. Process environment variable for provider
+ * 2. Process environment variable for provider (supports legacy fallback)
  * 3. .env in project dir (ONLY if --load-env enabled AND .env is in .gitignore)
  * 4. User global config
  */
@@ -77,8 +99,12 @@ export function getApiKey(providerName, options = {}) {
   }
 
   // 2. Process environment variable
-  if (envVarName && process.env[envVarName]) {
-    return { key: process.env[envVarName].trim(), source: 'env_var' };
+  let envVal = envVarName ? process.env[envVarName] : null;
+  if (!envVal && envVarName === 'README_SCAN_API_KEY' && process.env.AUTO_README_API_KEY) {
+    envVal = process.env.AUTO_README_API_KEY;
+  }
+  if (envVal) {
+    return { key: envVal.trim(), source: 'env_var' };
   }
 
   // 3. Project .env (only if loadEnv enabled and in .gitignore)
@@ -89,7 +115,8 @@ export function getApiKey(providerName, options = {}) {
       const gitignore = fs.readFileSync(gitignorePath, 'utf8');
       if (gitignore.includes('.env')) {
         const dotEnvContent = fs.readFileSync(dotEnvPath, 'utf8');
-        const match = dotEnvContent.match(new RegExp(`^${envVarName}=(.*)$`, 'm'));
+        const match = dotEnvContent.match(new RegExp(`^${envVarName}=(.*)$`, 'm')) ||
+          (envVarName === 'README_SCAN_API_KEY' ? dotEnvContent.match(/^AUTO_README_API_KEY=(.*)$/m) : null);
         if (match && match[1]) {
           return { key: match[1].trim().replace(/^['"]|['"]$/g, ''), source: 'project_env' };
         }
@@ -140,9 +167,10 @@ export function getAuthStatus() {
     let masked = null;
     let source = null;
 
-    if (envKey && process.env[envKey]) {
+    if (envKey && (process.env[envKey] || (envKey === 'README_SCAN_API_KEY' && process.env.AUTO_README_API_KEY))) {
+      const val = process.env[envKey] || process.env.AUTO_README_API_KEY;
       configured = true;
-      masked = maskKey(process.env[envKey]);
+      masked = maskKey(val);
       source = `Environment (${envKey})`;
     } else if (conf.keys && conf.keys[pName]) {
       configured = true;

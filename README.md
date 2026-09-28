@@ -1,198 +1,174 @@
-# auto-readme
+# readme-scan
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-success?style=flat-square) ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen?style=flat-square) ![Dependencies](https://img.shields.io/badge/dependencies-0-success?style=flat-square)
+[![npm version](https://img.shields.io/npm/v/readme-scan.svg?style=flat-square)](https://www.npmjs.com/package/readme-scan)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/davidyehuda45-byte/readme-scan/ci.yml?branch=main&style=flat-square)](https://github.com/davidyehuda45-byte/readme-scan/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-Offline-first, evidence-based CLI tool to generate professional, natural developer-written `README.md` files for any codebase.
+Generate a README.md by scanning your project. Runs locally, no API key needed.
 
 ## Overview
 
-Most automated README generators produce either shallow generic templates filled with marketing buzzwords and hallucinated claims, or require proprietary cloud dependencies.
+readme-scan analyzes your repository to produce structured, evidence-based documentation. Instead of generating generic placeholders or hallucinated claims, every generated section maps directly to detected code artifacts, dependencies, database configurations, and route files.
 
-`auto-readme` uses local static analysis to inspect your repository. It analyzes package manifests, directory layouts, database schemas, router files, Docker definitions, CI workflows, and environment variables. Sections are only generated when verifiable code evidence exists.
+- Zero runtime dependencies: Built entirely with Node.js standard libraries.
+- Offline by default: Scans your filesystem locally without network requests.
+- Evidence-based sections: Sections appear only when verifiable files or dependencies exist.
+- Developer tone: Direct, clear documentation without promotional buzzwords or decorative emoji clutter.
+- Marker-based merge: Updates documentation blocks while preserving your manual edits outside markers.
 
-Zero runtime dependencies. 100% offline by default.
+## Example Output
 
-## Key Capabilities
+Below is an excerpt from documentation generated for an Express and PostgreSQL service. See [examples/express-api/README.md](examples/express-api/README.md) for the full output.
 
-- Evidence-Based Generation: Eliminates generic fillers. If an API route, database model, or test suite is not detected in your code, the section is omitted.
-- Natural Developer Tone: Output reads like code written by an experienced engineer. Zero emoji clutter, flattened heading hierarchies, and no marketing slogans.
-- Deep Scan Engine: 
-  - Classifies project architectures (Web Frontend, Backend/API, Fullstack, CLI, Mobile, DevOps, Monorepo).
-  - Extracts backend routes (Express, FastAPI, Flask, Django, Go Gin/Fiber, and OpenAPI specs).
-  - Inspects database engines, ORMs, and extracts Prisma models with field counts.
-  - Generates static security posture checklists and alerts for unignored secret patterns.
-  - Parses Dockerfiles, Compose services, and GitHub Actions workflows.
-- Safe Marker-Based Merge Mode: Updates documentation blocks between `<!-- auto-readme:start:... -->` markers without overwriting manual notes.
-- Optional BYOK AI Enhancement: Bring your own key (OpenAI, Anthropic, Gemini, Groq, OpenRouter) or run locally using Ollama. AI only polishes phrasing from verified scanner facts. Secrets and system paths are redacted before payload transmission.
-- Multi-Ecosystem: Native detection for Node.js/TypeScript, Python, Rust, Go, PHP, Java, Ruby, and generic software projects.
-- CI / CD Quality Gate: Run with `--check` to fail builds if documentation is out of sync with code changes.
-- Built-in Style Linter: Standalone `auto-readme lint` command to enforce clean technical writing standards on any Markdown file.
+```markdown
+## Features
 
-## Installation
+<!-- readme-scan:start:features -->
+- RESTful API: API with 3 endpoints
+- Database Persistence: Powered by PostgreSQL
+<!-- readme-scan:end:features -->
 
-Install globally via npm:
+## Tech Stack
 
-```bash
-npm install -g auto-readme
-```
+<!-- readme-scan:start:stack -->
+| Category | Technologies |
+| --- | --- |
+| Primary Language | JavaScript |
+| Backend / API | `Express` |
+| Database / ORM | `PostgreSQL Client (pg)` |
+<!-- readme-scan:end:stack -->
 
-Or run directly without installation:
+## API Documentation
 
-```bash
-npx auto-readme
+<!-- readme-scan:start:api -->
+| Method | Endpoint Path | Source File |
+| --- | --- | --- |
+| `GET` | `/api/health` | `src/index.js` |
+| `GET` | `/api/tasks` | `src/index.js` |
+| `POST` | `/api/tasks` | `src/index.js` |
+<!-- readme-scan:end:api -->
 ```
 
 ## Quick Start
 
-Generate documentation for your current directory:
+Run directly via npx:
 
 ```bash
-auto-readme
+npx readme-scan
 ```
 
-Preview the output in the terminal without writing to disk:
+Or install globally:
 
 ```bash
-auto-readme --dry-run
+npm install -g readme-scan
+readme-scan
 ```
 
-Update an existing README while preserving custom sections:
+Common commands:
 
 ```bash
-auto-readme --merge
+# Preview generated markdown in terminal without saving
+readme-scan --dry-run
+
+# Scan a specific directory
+readme-scan ./projects/my-api
+
+# Update existing documentation while preserving manual notes
+readme-scan --merge
+
+# Generate documentation in Indonesian
+readme-scan --lang id
+
+# CI mode: exit non-zero if README.md is outdated
+readme-scan --check
+
+# Export repository facts as JSON
+readme-scan --json
 ```
 
-Generate in Indonesian:
+## Command Line Options
 
-```bash
-auto-readme --lang id
-```
-
-Verify documentation status in continuous integration:
-
-```bash
-auto-readme --check
-```
-
-Output repository facts as structured JSON:
-
-```bash
-auto-readme --json
-```
-
-## CLI Usage & Options
-
-### Core Flags
-
-| Flag | Description | Default |
+| Option | Description | Default |
 | --- | --- | --- |
-| `-o, --output <path>` | Path to the target output file | `./README.md` |
+| `-o, --output <path>` | Path to target output file | `targetDir/README.md` |
 | `-f, --force` | Overwrite existing README without confirmation prompt | `false` |
 | `-l, --lang <en\|id>` | Language for the output document | `en` |
 | `--style <preset>` | Formatting preset (`plain`, `minimal`, `detailed`, `classic`, `expressive`) | `plain` |
 | `-m, --minimal` | Shortcut for `--style minimal` | `false` |
 | `--dry-run` | Print generated markdown to stdout without writing files | `false` |
 | `--merge, --update` | Update content inside markers while preserving manual text outside | `false` |
-| `--check` | CI mode: exit code 0 if README is up to date, 1 if outdated | `false` |
-| `--sections <list>` | Limit generation to specific comma-separated sections | all |
-| `--exclude <list>` | Exclude specific comma-separated sections | none |
+| `--check` | CI mode: exit 0 if README is up to date, 1 if outdated | `false` |
+| `--sections <list>` | Include only comma-separated sections | all |
+| `--exclude <list>` | Exclude comma-separated sections | none |
 | `--json` | Print extracted repository facts as JSON and exit | `false` |
-| `--badges <style>` | Badge style (`flat`, `flat-square`, `for-the-badge`, `none`) | `flat-square` |
-| `--no-lint` | Disable the style linter post-processor | `false` |
+| `--depth <n>` | Folder tree traversal depth | `2` |
+| `--init-config` | Generate a sample `.readmescanrc.json` configuration file | `false` |
 | `-v, --version` | Display version number | - |
 | `-h, --help` | Display CLI help menu | - |
 
-### Style Presets
+## Style Presets & Linter
 
-Select formatting rules via `--style <preset>`:
+readme-scan includes formatting presets to adjust documentation density:
 
-- `plain` (default): Minimal headings, concise prose, zero emojis, max 8 sections, no decorative list labels.
-- `minimal`: Bare essentials: title, description, setup, usage, and license.
-- `detailed`: Full technical breakdown of stack, routes, models, environment variables, and infrastructure.
-- `classic`: Standard documentation layout with Table of Contents and shields.
-- `expressive`: Opt-in mode allowing emojis and colorful badges.
+- `plain` (default): Minimal headings, concise prose, zero emojis, max 8 sections.
+- `minimal`: Core details only: title, description, setup, usage, and license.
+- `detailed`: Full technical breakdown including architecture trees, endpoints, and environment variables.
+- `classic`: Traditional layout with Table of Contents and shield badges.
+- `expressive`: Opt-in mode that allows emojis and badges.
 
-### Subcommands
-
-### 1. Style Linter (`lint`)
-
-Inspect or auto-fix any Markdown document against developer tone guidelines (removes emojis, buzzwords, deep headings, and decorative comments):
+The built-in style linter checks or fixes markdown files against technical writing standards:
 
 ```bash
-auto-readme lint README.md
-auto-readme lint README.md --fix
+# Inspect markdown style compliance
+readme-scan lint README.md
+
+# Automatically fix violations (strip buzzwords, flatten deep headings)
+readme-scan lint README.md --fix
 ```
 
-### 2. Key Management (`auth`)
+## Optional AI Enhancement
 
-Securely configure API keys for optional AI enhancement. Keys are stored with `0600` permissions in your user config and masked on inspection:
+AI enhancement is strictly opt-in. Without the `--ai` flag, no network requests are made.
 
-```bash
-# View configured providers
-auto-readme auth status
-
-# Store key
-auto-readme auth set openai
-
-# Remove key
-auto-readme auth remove openai
-```
-
-### 3. Model Registry (`models`)
-
-List default and recommended models for supported providers:
+When enabled, the scanner extracts local facts first, and the AI only polishes phrasing from verified facts. Sensitive credentials, tokens, and local filesystem paths are automatically redacted before transmission.
 
 ```bash
-auto-readme models
-```
-
-### Optional AI Mode (BYOK & Local Models)
-
-AI mode is strictly opt-in. Without the `--ai` flag, zero network calls are made.
-
-```bash
-# Use local Ollama (offline & free, default: http://localhost:11434)
-auto-readme --ai --provider ollama --model llama3.2
+# Use local Ollama instance (offline and free)
+readme-scan --ai --provider ollama --model llama3.2
 
 # Use cloud provider with environment variable or stored key
-auto-readme --ai --provider openai --model gpt-4o-mini
-auto-readme --ai --provider anthropic --model claude-3-5-haiku-latest
-auto-readme --ai --provider gemini --model gemini-2.5-flash
+readme-scan --ai --provider openai --model gpt-4o-mini
+readme-scan --ai --provider anthropic --model claude-3-5-haiku-latest
+readme-scan --ai --provider gemini --model gemini-2.5-flash
 
-# Preview sanitized payload before sending to an LLM
-auto-readme --ai-preview
+# Preview sanitized payload without sending network requests
+readme-scan --ai-preview
 ```
 
-## Architecture
+Manage stored API keys:
 
-```text
-auto-readme/
-├── bin/
-│   └── auto-readme.js       # CLI entrypoint
-├── src/
-│   ├── ai/                  # Optional BYOK AI engine & secret redaction
-│   ├── data/                # Data-driven mappings (dependencies, models, rules)
-│   ├── detectors/           # Deep Scan modules (endpoints, database, auth, security)
-│   ├── generator/           # Adaptive renderer, merge engine, templates
-│   ├── locales/             # Bilingual dictionaries (en, id)
-│   ├── scanner/             # Traversal, language breakdown, AST scanners
-│   ├── style/               # Style linter, presets, and rule engine
-│   └── cli.js               # Command-line argument parsing and orchestration
-└── test/                    # Automated test suites
+```bash
+readme-scan auth status
+readme-scan auth set openai
+readme-scan auth remove openai
 ```
 
-## Development & Testing
+## Contributing & Testing
 
-Run the automated test suite:
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines.
+
+Run tests locally:
 
 ```bash
 npm test
 ```
 
+Check style compliance:
+
+```bash
+npm run lint:readme
+```
+
 ## License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
-
-## Author
-
-Maintained by **David Yehuda Surbakti**.
+Distributed under the MIT License. See [LICENSE](LICENSE) for details. Maintained by David Yehuda Surbakti.

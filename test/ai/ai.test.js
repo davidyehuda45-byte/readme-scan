@@ -164,7 +164,7 @@ describe('AI Mode and BYOK Security (PRD Addendum v3)', () => {
 
     assert.strictEqual(res.success, true);
     assert(res.scanData.description.includes('A mock application built with JavaScript.'));
-    assert(res.scanData.description.includes('<!-- auto-readme:ai -->'));
+    assert(res.scanData.description.includes('<!-- readme-scan:ai -->'));
     assert.strictEqual(res.usage.totalTokens, 200);
   });
 

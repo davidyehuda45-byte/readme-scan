@@ -11,16 +11,16 @@ import { runAiEnhancement } from './ai/run.js';
 import { getAuthStatus, setApiKey, removeApiKey } from './ai/auth.js';
 import { loadModelsConfig } from './ai/provider.js';
 
-const VERSION = '3.0.0';
+const VERSION = '0.1.0';
 
 export function printHelp() {
   console.log(`
-${colors.bold(colors.cyan('auto-readme'))} ${colors.gray(`v${VERSION}`)}
-${colors.dim('Evidence-based, offline-first CLI tool to generate professional, natural README.md files.')}
+${colors.bold(colors.cyan('readme-scan'))} ${colors.gray(`v${VERSION}`)}
+${colors.dim('Generate a README.md by scanning your project. Runs locally, no API key needed.')}
 
 ${colors.bold('USAGE:')}
-  ${colors.green('auto-readme')} [path/to/project] [options]
-  ${colors.green('auto-readme')} <command> [arguments]
+  ${colors.green('readme-scan')} [path/to/project] [options]
+  ${colors.green('readme-scan')} <command> [arguments]
 
 ${colors.bold('COMMANDS:')}
   ${colors.yellow('lint <file>')}                  Check or fix README style rules
@@ -42,7 +42,7 @@ ${colors.bold('CORE OPTIONS:')}
 ${colors.bold('DEEP SCAN & EVIDENCE OPTIONS:')}
   ${colors.yellow('--sections <list>')}          Include only specified sections ${colors.gray('(e.g. stack,api,security)')}
   ${colors.yellow('--exclude <list>')}           Exclude specific sections
-  ${colors.yellow('--merge, --update')}          Preserve manual edits outside auto-readme markers
+  ${colors.yellow('--merge, --update')}          Preserve manual edits outside readme-scan markers
   ${colors.yellow('--check')}                    CI mode: exit non-zero if README.md is outdated
   ${colors.yellow('--verbose')}                  Display evidence and signal origins in terminal
   ${colors.yellow('--json')}                     Output raw facts data as clean JSON
@@ -50,7 +50,7 @@ ${colors.bold('DEEP SCAN & EVIDENCE OPTIONS:')}
   ${colors.yellow('--workspace <name>')}         Generate README for a specific monorepo workspace
   ${colors.yellow('--badges <style>')}           Badge style: flat, flat-square, for-the-badge, none
   ${colors.yellow('--no-lint')}                  Disable style linter post-processor
-  ${colors.yellow('--init-config')}              Generate a sample .autoreadmerc.json config file
+  ${colors.yellow('--init-config')}              Generate a sample .readmescanrc.json config file
   ${colors.yellow('-e, --ecosystem <name>')}     Override primary ecosystem
 
 ${colors.bold('AI ENHANCEMENT (BYOK - OPT-IN):')}
@@ -80,7 +80,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   }
 
   const optionsConfig = {
-    output: { type: 'string', short: 'o', default: './README.md' },
+    output: { type: 'string', short: 'o' },
     force: { type: 'boolean', short: 'f', default: false },
     lang: { type: 'string', short: 'l', default: 'en' },
     minimal: { type: 'boolean', short: 'm', default: false },
@@ -123,7 +123,7 @@ export async function runCli(argv = process.argv.slice(2)) {
     });
   } catch (err) {
     console.error(`${colors.red('Error:')} ${err.message}`);
-    console.log(`Run ${colors.cyan('auto-readme --help')} for available options.`);
+    console.log(`Run ${colors.cyan('readme-scan --help')} for available options.`);
     return 1;
   }
 
@@ -135,7 +135,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   }
 
   if (values.version) {
-    console.log(`auto-readme v${VERSION}`);
+    console.log(`readme-scan v${VERSION}`);
     return 0;
   }
 
@@ -156,7 +156,7 @@ export async function runCli(argv = process.argv.slice(2)) {
   }
 
   if (values['init-config']) {
-    const configPath = path.join(targetDir, '.autoreadmerc.json');
+    const configPath = path.join(targetDir, '.readmescanrc.json');
     const sampleConfig = {
       lang: 'en',
       style: 'plain',
@@ -166,8 +166,27 @@ export async function runCli(argv = process.argv.slice(2)) {
       sections: [],
     };
     fs.writeFileSync(configPath, JSON.stringify(sampleConfig, null, 2), 'utf8');
-    console.log(`${colors.green('✔')} Created ${colors.cyan('.autoreadmerc.json')}`);
+    console.log(`${colors.green('✔')} Created ${colors.cyan('.readmescanrc.json')}`);
     return 0;
+  }
+
+  // Load configuration file if present
+  let fileConfig = {};
+  const primaryConfigPath = path.join(targetDir, '.readmescanrc.json');
+  const legacyConfigPath = path.join(targetDir, '.autoreadmerc.json');
+  if (fs.existsSync(primaryConfigPath)) {
+    try {
+      fileConfig = JSON.parse(fs.readFileSync(primaryConfigPath, 'utf8'));
+    } catch {
+      console.warn(colors.yellow(`Warning: Failed to parse ${primaryConfigPath}`));
+    }
+  } else if (fs.existsSync(legacyConfigPath)) {
+    console.warn(colors.yellow('Warning: .autoreadmerc.json is deprecated. Please rename to .readmescanrc.json.'));
+    try {
+      fileConfig = JSON.parse(fs.readFileSync(legacyConfigPath, 'utf8'));
+    } catch {
+      console.warn(colors.yellow(`Warning: Failed to parse ${legacyConfigPath}`));
+    }
   }
 
   if (!fs.existsSync(targetDir)) {
@@ -175,20 +194,29 @@ export async function runCli(argv = process.argv.slice(2)) {
     return 1;
   }
 
-  const lang = (values.lang || 'en').toLowerCase();
+  const lang = (values.lang || fileConfig.lang || 'en').toLowerCase();
   if (lang !== 'en' && lang !== 'id') {
     console.error(`${colors.red('Error:')} Unsupported language "${values.lang}". Supported languages: en, id`);
     return 1;
   }
 
-  let outputPath = values.output;
-  if (!path.isAbsolute(outputPath)) {
-    outputPath = path.resolve(targetDir, outputPath);
+  let outputPath;
+  if (values.output) {
+    outputPath = path.isAbsolute(values.output)
+      ? values.output
+      : path.resolve(process.cwd(), values.output);
+  } else {
+    outputPath = path.resolve(targetDir, 'README.md');
   }
 
-  const depth = parseInt(values.depth, 10) || 2;
+  const outputDir = path.dirname(outputPath);
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const depth = parseInt(values.depth || fileConfig.depth || '2', 10) || 2;
   const isMerge = Boolean(values.merge || values.update);
-  const stylePreset = values.minimal ? 'minimal' : (values.style || 'plain');
+  const stylePreset = values.minimal ? 'minimal' : (values.style || fileConfig.style || 'plain');
 
   if (!values.json && !values['ai-preview']) {
     console.log(`${colors.cyan('🔍 Scanning project with Deep Scan v2...')} ${colors.gray(targetDir)}`);
@@ -259,9 +287,9 @@ export async function runCli(argv = process.argv.slice(2)) {
     lang,
     minimal: values.minimal,
     style: stylePreset,
-    badges: values.badges,
-    sections: values.sections,
-    exclude: values.exclude,
+    badges: values.badges || fileConfig.badges,
+    sections: values.sections || (Array.isArray(fileConfig.sections) && fileConfig.sections.length > 0 ? fileConfig.sections.join(',') : undefined),
+    exclude: values.exclude || (Array.isArray(fileConfig.exclude) && fileConfig.exclude.length > 0 ? fileConfig.exclude.join(',') : undefined),
     merge: isMerge,
     noLint: values['no-lint'],
     existingContent,
@@ -284,7 +312,7 @@ export async function runCli(argv = process.argv.slice(2)) {
     const currentOnDisk = fs.readFileSync(outputPath, 'utf8').replace(/\r\n/g, '\n').trim();
     const generatedMarkdown = markdown.replace(/\r\n/g, '\n').trim();
     if (currentOnDisk !== generatedMarkdown) {
-      console.error(`${colors.red('✖ Check failed:')} README.md is outdated. Run auto-readme to update.`);
+      console.error(`${colors.red('✖ Check failed:')} README.md is outdated. Run readme-scan to update.`);
       return 1;
     }
     console.log(`${colors.green('✔ Check passed:')} README.md is up to date.`);
@@ -367,7 +395,7 @@ async function handleLintCommand(args) {
     console.log(colors.green(`\n✔ Applied auto-fixes to ${fullPath}`));
     return 0;
   } else {
-    console.log(colors.gray(`\nRun "auto-readme lint ${filePath} --fix" to automatically apply formatting fixes.`));
+    console.log(colors.gray(`\nRun "readme-scan lint ${filePath} --fix" to automatically apply formatting fixes.`));
     return 1;
   }
 }
@@ -392,7 +420,7 @@ async function handleAuthCommand(args) {
 
   if (sub === 'set') {
     if (!provider) {
-      console.error(colors.red('Usage: auto-readme auth set <provider>'));
+      console.error(colors.red('Usage: readme-scan auth set <provider>'));
       return 1;
     }
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -412,7 +440,7 @@ async function handleAuthCommand(args) {
 
   if (sub === 'remove') {
     if (!provider) {
-      console.error(colors.red('Usage: auto-readme auth remove <provider>'));
+      console.error(colors.red('Usage: readme-scan auth remove <provider>'));
       return 1;
     }
     const removed = removeApiKey(provider);
@@ -424,7 +452,7 @@ async function handleAuthCommand(args) {
     return 0;
   }
 
-  console.log('Usage: auto-readme auth <status|set <provider>|remove <provider>>');
+  console.log('Usage: readme-scan auth <status|set <provider>|remove <provider>>');
   return 1;
 }
 
