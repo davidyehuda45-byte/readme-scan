@@ -1,0 +1,35 @@
+{
+  "name": "auto-readme",
+  "version": "1.0.0",
+  "description": "Blazing-fast, zero-config, 100% offline CLI tool to generate professional README.md files for any project.",
+  "type": "module",
+  "main": "./src/cli.js",
+  "bin": {
+    "auto-readme": "./bin/auto-readme.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node ./bin/auto-readme.js",
+    "test": "node --test test/**/*.test.js"
+  },
+  "keywords": [
+    "readme",
+    "generator",
+    "cli",
+    "markdown",
+    "documentation",
+    "developer-tools",
+    "offline",
+    "zero-config"
+  ],
+  "author": "David Yehuda Surbakti",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
